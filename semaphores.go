@@ -1,7 +1,9 @@
 package typeutils
 
 import (
+	"context"
 	"errors"
+	"golang.org/x/sync/semaphore"
 	"log"
 	"time"
 )
@@ -11,14 +13,20 @@ type Semaphores struct {
 }
 
 type Semaphore struct {
-	Name         string
-	MaximumValue int
-	value        int
-	Timeout      int
+	name     string
+	maximum  int
+	value    int
+	weighted *semaphore.Weighted
+	timeout  int
 }
 
-func (s *Semaphores) Add(semaphore Semaphore) {
-	s.semaphoreMap[semaphore.Name] = semaphore
+func (s *Semaphores) Add(name string, maximum int, timeout int) {
+	s.semaphoreMap[name] = Semaphore{
+		name:     name,
+		maximum:  maximum,
+		weighted: semaphore.NewWeighted(int64(maximum)),
+		timeout:  0,
+	}
 }
 
 func (s *Semaphores) P(name string) error {
@@ -26,12 +34,12 @@ func (s *Semaphores) P(name string) error {
 }
 
 func (s *Semaphores) Wait(name string) error {
-	if semaphore, defined := s.semaphoreMap[name]; defined {
-		semaphore.value--
-		s.semaphoreMap[name] = semaphore
+	if sem, defined := s.semaphoreMap[name]; defined {
+		sem.value--
+		s.semaphoreMap[name] = sem
 
 		startTime := time.Now()
-		timeout := semaphore.Timeout
+		timeout := sem.timeout
 		for s.semaphoreMap[name].value < 0 {
 			log.Println("wait on semaphore:", name)
 			nowTime := time.Now()
@@ -45,17 +53,43 @@ func (s *Semaphores) Wait(name string) error {
 	return errors.New("invalid semaphore name: " + name)
 }
 
+func (s *Semaphores) Acquire(name string) error {
+	if sem, defined := s.semaphoreMap[name]; defined {
+		timeout := time.Now().Add(time.Duration(sem.timeout) * time.Second)
+		ctx, cancel := context.WithDeadline(context.Background(), timeout)
+		defer cancel()
+
+		err := sem.weighted.Acquire(ctx, 1)
+		if err != nil {
+			return errors.New("timeout for wait on semaphore: " + name + ": " + ctx.Err().Error())
+		}
+
+		return nil
+	}
+
+	return errors.New("invalid semaphore name: " + name)
+}
+
 func (s *Semaphores) V(name string) error {
 	return s.Signal(name)
 }
 
 func (s *Semaphores) Signal(name string) error {
-	if semaphore, defined := s.semaphoreMap[name]; defined {
-		semaphore.value++
-		if semaphore.value > semaphore.MaximumValue {
-			semaphore.value = semaphore.MaximumValue
+	if sem, defined := s.semaphoreMap[name]; defined {
+		sem.value++
+		if sem.value > sem.maximum {
+			sem.value = sem.maximum
 		}
-		s.semaphoreMap[name] = semaphore
+		s.semaphoreMap[name] = sem
+		return nil
+	}
+
+	return errors.New("invalid semaphore name: " + name)
+}
+
+func (s *Semaphores) Release(name string) error {
+	if sem, defined := s.semaphoreMap[name]; defined {
+		sem.weighted.Release(1)
 		return nil
 	}
 
