@@ -48,8 +48,10 @@ func (s *Semaphores) Wait(name string) error {
 		startTime := time.Now()
 		timeout := sem.timeout
 		for s.semaphoreMap[name].value < 0 {
-			log.Println("wait on semaphore:", name)
 			nowTime := time.Now()
+			if nowTime.Second()%30 == 0 {
+				log.Println("waiting on semaphore:", name)
+			}
 			if nowTime.After(startTime.Add(time.Duration(timeout) * time.Second)) {
 				return errors.New("timeout for wait on semaphore: " + name)
 			}
