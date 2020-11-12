@@ -30,6 +30,7 @@ func (s *Semaphores) Add(name string, maximum int, timeout int) {
 	s.semaphoreMap[name] = Semaphore{
 		name:     name,
 		maximum:  maximum,
+		value:    maximum,
 		weighted: semaphore.NewWeighted(int64(maximum)),
 		timeout:  0,
 	}
