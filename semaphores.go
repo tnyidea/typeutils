@@ -32,7 +32,7 @@ func (s *Semaphores) Add(name string, maximum int, timeout int) {
 		maximum:  maximum,
 		value:    maximum,
 		weighted: semaphore.NewWeighted(int64(maximum)),
-		timeout:  0,
+		timeout:  timeout,
 	}
 }
 
