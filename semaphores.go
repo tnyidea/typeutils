@@ -20,6 +20,12 @@ type Semaphore struct {
 	timeout  int
 }
 
+func NewSemaphores() Semaphores {
+	return Semaphores{
+		semaphoreMap: make(map[string]Semaphore),
+	}
+}
+
 func (s *Semaphores) Add(name string, maximum int, timeout int) {
 	s.semaphoreMap[name] = Semaphore{
 		name:     name,
