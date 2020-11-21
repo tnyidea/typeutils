@@ -57,6 +57,7 @@ func (s *Semaphores) Wait(name string) error {
 				if sem.value > sem.maximum {
 					sem.value = sem.maximum
 				}
+				s.semaphoreMap[name] = sem
 				return errors.New("timeout for wait on semaphore: " + name)
 			}
 		}
