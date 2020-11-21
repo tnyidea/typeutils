@@ -53,6 +53,10 @@ func (s *Semaphores) Wait(name string) error {
 				log.Println("waiting on semaphore:", name)
 			}
 			if nowTime.After(startTime.Add(time.Duration(timeout) * time.Second)) {
+				sem.value++
+				if sem.value > sem.maximum {
+					sem.value = sem.maximum
+				}
 				return errors.New("timeout for wait on semaphore: " + name)
 			}
 		}
