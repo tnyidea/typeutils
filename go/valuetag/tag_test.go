@@ -1,7 +1,8 @@
 package valuetag
 
 import (
-	typeutils "github.com/tnyidea/typeutils/go"
+	"github.com/tnyidea/typeutils/go/typeutils"
+	"github.com/tnyidea/valuetag"
 	"log"
 	"testing"
 )
